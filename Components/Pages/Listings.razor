@@ -1,0 +1,224 @@
+﻿@page "/listings"
+@inject NavigationManager Navigation;
+@inject BlazorMudBlazorCACApp1.Components.Services.SharedRefVarService SharedRefVarService;
+@inject BlazorMudBlazorCACApp1.Components.Services.FirebaseAuthService FirebaseAuthService;
+@inject BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService ListingDataStorageService;
+@inject BlazorMudBlazorCACApp1.Components.Services.NavigationInfoService NavigationInfoService;
+@using static BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService;
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100;300&display=swap');
+    .roboto-thin {
+        font-family: "Roboto", sans-serif;
+        font-weight: 100;
+        font-style: normal;
+    }
+    .roboto-light {
+        font-family: "Roboto", sans-serif;
+        font-weight: 300;
+        font-style: normal;
+    }
+</style>
+
+<div style="overflow-y:auto; height: 95vh; width: 100vw; overflow-x: hidden ">
+    <Animation Effect="Effect.ZoomIn" Speed="Speed.Faster" Enabled="@NavigationInfoService.enableAnimation">
+        <Animation Effect="Effect.FadeInUp" Speed="Speed.Faster" Enabled="@NavigationInfoService.enableAnimation" >
+            <MudPaper Width="100%" Style="background-color: transparent; margin: auto;" Elevation="0">
+
+                <MudExpansionPanel Style="background-color: transparent; width: 100vw" @bind-Expanded="NavigationInfoService.listingsPageSavedOpen">
+                    <TitleContent>
+                        <div style="display: flex; align-items: center; flex-direction: row; padding: 10px">
+                            <MudIcon Icon="@Icons.Material.Filled.EmojiObjects" Size="Size.Large" Style="color: white" />
+                            <MudText></MudText>
+                            <MudText Typo="Typo.h3" Style="color: white">Saved Listings</MudText>
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudStack Spacing="5">
+                            <MudText></MudText> <!--empty line break to provide margin from top-->
+                            @foreach (ExtendedListingData exLD in ListingDataStorageService.savedExtendedListingData.Values)
+                            {
+                                <MudCard>
+                                    <MudCardMedia Image="@exLD.imageUrl" Style="height: 25vh" />
+                                    <MudCardContent>
+                                        <MudStack Spacing="2">
+                                            <MudStack Style="display: flex; align-items: center" Row="true">
+                                                @if (exLD.accountVerified == false)
+                                                {
+                                                    <MudAvatar Size="Size.Small">
+                                                        @if (exLD.profileUrl != "")
+                                                        {
+                                                            <MudImage Src="@exLD.profileUrl" />
+                                                        }
+                                                        else if (exLD.accountType == "Institution")
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Domain" Color="Color.Primary" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Person" />
+                                                        }
+                                                    </MudAvatar>
+                                                }
+                                                else
+                                                {
+                                                    <MudBadge Icon="@Icons.Material.Filled.Check" Bordered="true" Overlap="true">
+                                                        <MudAvatar Size="Size.Small">
+                                                            @if (exLD.profileUrl != "")
+                                                            {
+                                                                <MudImage Src="@exLD.profileUrl" />
+                                                            }
+                                                            else if (exLD.accountType == "Institution")
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.Domain" Color="Color.Primary" />
+                                                            }
+                                                            else
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.Person" />
+                                                            }
+                                                        </MudAvatar>
+                                                    </MudBadge>
+                                                }
+
+                                                <MudText Class="roboto-light">@exLD.accountName</MudText>
+                                            </MudStack>
+
+                                            <h3>@exLD.address</h3>
+                                            <MudStack Row="true" Spacing="0">
+                                                @if (exLD.startDateTimestamp == exLD.endDateTimestamp)
+                                                {
+                                                    <MudText Class="roboto-light">@DateTimeOffset.FromUnixTimeSeconds(exLD.startDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd")</MudText>
+                                                }
+                                                else
+                                                {
+                                                    <MudText Class="roboto-light">@DateTimeOffset.FromUnixTimeSeconds(exLD.startDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd") - @DateTimeOffset.FromUnixTimeSeconds(exLD.endDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd")</MudText>
+                                                }
+                                                <MudText Class="roboto-light" Style="white-space: pre"> | @DateTimeOffset.FromUnixTimeSeconds(exLD.startTimeTimestamp).ToLocalTime().DateTime.ToString("hh:mm tt") - @DateTimeOffset.FromUnixTimeSeconds(exLD.endTimeTimestamp).ToLocalTime().DateTime.ToString("hh:mm tt")</MudText>
+                                            </MudStack>
+
+                                            <MudTextField ReadOnly="true" MaxLines="3" Value="@exLD.description" />
+                                        </MudStack>
+
+                                    </MudCardContent>
+                                    <MudCardActions>
+                                        <MudIconButton Icon="@Icons.Material.Filled.West" OnClick="@(() => {
+                                    ListingDataStorageService.presentedExtendedListing = exLD;
+                                    NavigationInfoService.prevPage = "/listings";
+                                    Navigation.NavigateTo("/viewListing");
+                                })" />
+                                        <MudChipSet T="string">
+                                            @foreach (KeyValuePair<string, string> tagPair in exLD.tags.ToArray())
+                                            {
+                                                <MudChip T="string" Style="@($"color: {tagPair.Value}; border-color: {tagPair.Value}")" Text="@tagPair.Key" Variant="Variant.Outlined" />
+                                            }
+                                        </MudChipSet>
+                                    </MudCardActions>
+                                </MudCard>
+
+                            }
+                        </MudStack>
+                    </ChildContent>
+                </MudExpansionPanel>
+                
+                <MudDivider />
+                <!--<h3>My Listings</h3>
+                <br /> -->
+                <MudExpansionPanel Style="width: 100vw; background-color: transparent" @bind-Expanded="NavigationInfoService.listingsPageUserOpen" >
+                    <TitleContent>
+                        <div style="display: flex; align-items: center; flex-direction: row; padding: 10px">
+                            <MudIcon Icon="@Icons.Material.Filled.Handyman" Size="Size.Large" Color="Color.Primary" />
+                            <MudText></MudText>
+                            <MudText Typo="Typo.h3" Color="Color.Primary">My Listings</MudText>
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudStack Spacing="5">
+                            @foreach (UserCreatedListingData u in ListingDataStorageService.userCreatedListingData)
+                            {
+                                <MudCard>
+
+                                    <MudCardMedia Image="@(u.imageUrl)" Style="height: 20vh" />
+
+                                    <MudCardContent>
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.h6" Style="color: white">@u.address</MudText>
+                                            @if (DateTimeOffset.FromUnixTimeSeconds(u.startDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd") == DateTimeOffset.FromUnixTimeSeconds(u.endDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd"))
+                                            {
+                                                <MudText Style="color: white">@DateTimeOffset.FromUnixTimeSeconds(u.startDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd") | @DateTime.Today.Add(TimeSpan.FromSeconds(u.startTimeTimestamp)).ToString("hh:mm tt") - @DateTime.Today.Add(TimeSpan.FromSeconds(u.endTimeTimestamp)).ToString("hh:mm tt")</MudText>
+                                            }
+                                            else
+                                            {
+                                                <MudText Style="color: white">@DateTimeOffset.FromUnixTimeSeconds(u.startDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd") - @DateTimeOffset.FromUnixTimeSeconds(u.endDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd") | @DateTime.Today.Add(TimeSpan.FromSeconds(u.startTimeTimestamp)).ToString("hh:mm tt") - @DateTime.Today.Add(TimeSpan.FromSeconds(u.endTimeTimestamp)).ToString("hh:mm tt")</MudText>
+                                            }
+
+                                            <MudTextField T="string" Text="@(u.description)" MaxLines="3" Disabled="true" />
+                                        </MudStack>
+
+                                    </MudCardContent>
+                                    <MudCardActions>
+                                        <MudIconButton Icon="@Icons.Material.Filled.West" OnClick="@(() => {ConvertUserCreatedListingToExtended(u);})" />
+
+                                        <MudChipSet T="string" Style="display: flex; flex-wrap: nowrap; overflow: clip; clip-path: margin-box">
+                                            @foreach (KeyValuePair<string, string> chip in u.tags.ToArray())
+                                            {
+                                                <MudChip T="string" Text="@chip.Key" Variant="Variant.Outlined" Size="Size.Small" Style="@($"color: {chip.Value}; border-color: {chip.Value}")" />
+                                            }
+                                        </MudChipSet>
+                                    </MudCardActions>
+                                </MudCard>
+
+                            }
+                        </MudStack>
+                    </ChildContent>
+                </MudExpansionPanel>
+                <MudDivider />
+
+
+            </MudPaper>
+        </Animation>
+    </Animation>
+</div>
+<Animation Effect="Effect.FadeInUp" Speed="@TimeSpan.FromSeconds(1.2)" Delay="@TimeSpan.FromMilliseconds(450)" Enabled="@NavigationInfoService.enableAnimation" OnAnimationEnd="@(() => {NavigationInfoService.enableAnimation = false;})">
+    <MudFab EndIcon="@Icons.Material.Filled.Add" Label="Create" Style="position:absolute; bottom: 25px; right: 25px;" DropShadow="true" OnClick="@(() => {Navigation.NavigateTo("/createListing");})" />
+
+</Animation>
+
+@code {
+
+    async void ConvertUserCreatedListingToExtended(UserCreatedListingData ucLD)
+    {
+        var signedUpUsersDocumentReference = await FirebaseAuthService.firestore.Collection("listingInfo").Document(ucLD.listingId).GetSnapshotAsync();
+        Dictionary<string, Dictionary<string, string>> ucLDSignedUpUsers = signedUpUsersDocumentReference.GetValue<Dictionary<string, Dictionary<string, string>>>("signedUpUsers");
+        ExtendedListingData exLD = new ExtendedListingData
+            {
+                accountId = ucLD.accountId,
+                accountName = SharedRefVarService.username,
+                accountType = SharedRefVarService.accountType,
+                accountVerified = SharedRefVarService.verified,
+                address = ucLD.address,
+                addressLat = ucLD.addressLat,
+                addressLon = ucLD.addressLon,
+                description = ucLD.description,
+                imageUrl = ucLD.imageUrl,
+                listingId = ucLD.listingId,
+                tags = ucLD.tags,
+                startDateTimestamp = ucLD.startDateTimestamp,
+                startTimeTimestamp = ucLD.startTimeTimestamp,
+                endDateTimestamp = ucLD.endDateTimestamp,
+                endTimeTimestamp = ucLD.endTimeTimestamp,
+                 profileUrl = SharedRefVarService.profileUrl,
+                  requestsSignUpInfo = ucLD.requestsSignUpInfo,
+                   signedUpUsers = ucLDSignedUpUsers,
+                   carouselDisplay = ucLD.carouselDisplay,
+                   minimumAge = ucLD.minimumAge
+            };
+        NavigationInfoService.prevPage = "/listings";
+        ListingDataStorageService.presentedExtendedListing = exLD;
+        Navigation.NavigateTo("/viewListing");
+    }
+    protected override Task OnInitializedAsync()
+    {
+
+        return base.OnInitializedAsync();
+    }
+}

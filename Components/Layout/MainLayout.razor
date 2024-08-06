@@ -1,0 +1,179 @@
+﻿
+@using BlazorMudBlazorCACApp1.Components.Layout;
+@inject NavigationManager Navigation;
+@inject BlazorMudBlazorCACApp1.Components.Services.SharedRefVarService SharedRefVarService;
+@inject BlazorMudBlazorCACApp1.Components.Services.FirebaseAuthService FirebaseAuthService;
+@inject BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService ListingDataStorageService;
+@inject BlazorMudBlazorCACApp1.Components.Services.NavigationInfoService NavigationInfoService;
+@inherits LayoutComponentBase
+
+<MudThemeProvider IsDarkMode="true" Theme="MyCustomTheme"/>
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Bottom="true" Elevation="0">
+        <MudSpacer />
+        <MudIconButton id="HomePageButton" OnClick="@NavigateToPage1" Icon="@idsToIconTypes["HomePageButton"]" style="@($"color: {Colors.Green.Accent3}")" />
+        <MudSpacer />
+        <MudIconButton id="ListingsButton" OnClick="@NavigateToSavedListings" Icon="@idsToIconTypes["ListingsPageButton"]" Style="@($"color : {Colors.Green.Accent3}")" />
+        <MudSpacer />
+        <MudIconButton id="AccountPageButton" OnClick="@NavigateToPage2" Icon="@idsToIconTypes["AccountPageButton"]" style="@($"color: {Colors.Green.Accent3}")" />
+        <MudSpacer />
+    </MudAppBar>
+    <MudMainContent style="padding-top: 0px; background-color: #212121">
+        <div>
+            @Body
+        </div>
+        <!--<Animation Effect="Effect.ZoomIn" Speed="Speed.Faster" Enabled="@enableAnimation">
+            <Animation Effect="Effect.FadeInUp" Speed="Speed.Faster" Enabled="@enableAnimation" OnAnimationEnd="@(() => {enableAnimation = false;})">
+
+            </Animation>
+        </Animation>
+
+
+        -->
+    </MudMainContent>
+</MudLayout>
+
+
+
+@code {
+
+    bool _drawerOpen = true;
+    bool enableAnimation = false;
+    Dictionary<string, string> idsToIconTypes = new Dictionary<string, string>();
+    MudTheme MyCustomTheme = new MudTheme()
+        {
+            PaletteLight = new PaletteLight()
+            {
+                Primary = Colors.Green.Accent3,
+            },
+            PaletteDark = new PaletteDark()
+            {
+                Primary = Colors.Green.Accent3,
+                Error = Colors.Indigo.Lighten1,
+                Surface = "#181818",
+                TextPrimary = "#FaFaFa",
+                AppbarBackground = "#151515" // 151515
+            },
+
+            LayoutProperties = new LayoutProperties()
+            {
+                DrawerWidthLeft = "260px",
+                DrawerWidthRight = "300px"
+            }
+        };
+    string animationClassString = "";
+    private int tabText = 1;
+    /*protected override void OnInitialized()
+        {
+
+        base.OnInitialized();
+
+    } */
+    protected override Task OnInitializedAsync()
+    {   
+        idsToIconTypes.TryAdd("HomePageButton", Icons.Material.Filled.Home);
+        idsToIconTypes.TryAdd("AccountPageButton", Icons.Material.Outlined.Person);
+        idsToIconTypes.TryAdd("ListingsPageButton", Icons.Material.Outlined.Checklist);
+        //Task.Run(() => { HelperInitializeFunction(); });
+        RememberedCredentialsLogin();
+
+        return base.OnInitializedAsync();
+    }
+    private async void HelperInitializeFunction()
+    {
+        var localPath = Path.Combine(FileSystem.CacheDirectory, "google-services.json");
+        var accessiblePath = Path.Combine(FileSystem.Current.AppDataDirectory, "abc.json");
+        using var json = await FileSystem.OpenAppPackageFileAsync("google-services.json");
+
+        using var dest = File.Create(accessiblePath);
+        await json.CopyToAsync(dest);
+        Console.WriteLine("LOL!");
+        //Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", localPath);
+
+        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", accessiblePath);
+        dest.Close();
+        FirebaseAdmin.FirebaseApp.Create(new FirebaseAdmin.AppOptions()
+            {
+                Credential = Google.Apis.Auth.OAuth2.GoogleCredential.FromFile(accessiblePath)
+            });
+
+    }
+    void NavigateToPage1()
+    {
+        NavigationInfoService.enableAnimation = true;
+        Navigation.NavigateTo("/");
+        ListingDataStorageService.homeListingContentLoaded = true;
+        ResetTabIconButtonColorings();
+      #if ANDROID
+    CommunityToolkit.Maui.Core.Platform.StatusBar.SetColor(Microsoft.Maui.Graphics.Color.FromRgb(21, 21, 21)); // #151515
+        #endif
+        idsToIconTypes["HomePageButton"] = Icons.Material.Filled.Home;
+
+
+    }
+    void NavigateToSavedListings()
+    {
+        NavigationInfoService.enableAnimation = true;
+        Navigation.NavigateTo("/listings");
+        ResetTabIconButtonColorings();
+#if ANDROID
+    CommunityToolkit.Maui.Core.Platform.StatusBar.SetColor(Microsoft.Maui.Graphics.Color.FromRgb(33, 33, 33));
+#endif
+        idsToIconTypes["ListingsPageButton"] = Icons.Material.Filled.Checklist;
+
+
+    }
+    void NavigateToPage2()
+    {
+        NavigationInfoService.UpdateSettingsGreetingText();
+        NavigationInfoService.enableAnimation = true;
+        Navigation.NavigateTo("/account");
+        ResetTabIconButtonColorings();
+        #if ANDROID
+    CommunityToolkit.Maui.Core.Platform.StatusBar.SetColor(Microsoft.Maui.Graphics.Color.FromRgb(33, 33, 33));
+        #endif
+        idsToIconTypes["AccountPageButton"] = Icons.Material.Filled.Person;
+    }
+    async void RememberedCredentialsLogin()
+    {
+        string credentialsPath = Path.Combine(FileSystem.Current.AppDataDirectory, "rememberCredentials.txt");
+        if (!File.Exists(credentialsPath)) { NavigateToPage2(); return; }
+        try
+        {
+            string[] emailPasswordPair = File.ReadAllLines(credentialsPath);
+            if (emailPasswordPair.Length != 2) { File.Delete(credentialsPath); return; }
+            FirebaseAuthService.userCredentialStored = await FirebaseAuthService.client.SignInWithEmailAndPasswordAsync(emailPasswordPair[0], emailPasswordPair[1]);
+            SharedRefVarService.email = emailPasswordPair[0]; SharedRefVarService.password = emailPasswordPair[1];
+            SharedRefVarService.username = FirebaseAuthService.userCredentialStored.User.Info.DisplayName; 
+            var temporaryAdditionalUserData = await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.userCredentialStored.User.Uid).GetSnapshotAsync();
+            Dictionary<string, object> additionalUserData = temporaryAdditionalUserData.ToDictionary();
+            SharedRefVarService.verified = (bool)additionalUserData["verified"];
+            SharedRefVarService.accountType = (string)additionalUserData["accountType"];
+            SharedRefVarService.profileUrl = (string)additionalUserData["photoUrl"];
+            SharedRefVarService.shortname = (string)additionalUserData["shortname"];
+            SharedRefVarService.age = Convert.ToInt32((long)additionalUserData["age"]);
+            var receivedData = await FirebaseAuthService.firestore.Collection("listingInfo").GetSnapshotAsync();
+            ListingDataStorageService.UpdateExtendedListingData(receivedData);
+
+            SharedRefVarService.loggedInStatus = true;
+        } catch (Exception ex)
+        {
+            File.Delete(credentialsPath);
+            ListingDataStorageService.WipeOfflineListingsOnSignOut();
+            await App.Current.MainPage.DisplayAlert("Error encountered", ex.Message, ex.Source);
+            if (SharedRefVarService.loggedInStatus == false) { NavigateToPage2(); }
+            
+
+        }
+    }
+
+    void ResetTabIconButtonColorings()
+    {
+        idsToIconTypes["HomePageButton"] = Icons.Material.Outlined.Home; idsToIconTypes["AccountPageButton"] = Icons.Material.Outlined.Person; idsToIconTypes["ListingsPageButton"] = Icons.Material.Outlined.Checklist;
+    }
+}
+

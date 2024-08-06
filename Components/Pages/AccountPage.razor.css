@@ -1,0 +1,6 @@
+﻿.profileImage {
+    background-size: 100% auto;
+}
+.profileImage:hover {
+    opacity: 0.5;
+}

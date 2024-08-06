@@ -1,0 +1,232 @@
+﻿@page "/"
+@inject BlazorMudBlazorCACApp1.Components.Services.SharedRefVarService SharedRefVarService;
+@inject BlazorMudBlazorCACApp1.Components.Services.FirebaseAuthService FirebaseAuthService;
+@inject BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService ListingDataStorageService;
+@inject BlazorMudBlazorCACApp1.Components.Services.NavigationInfoService NavigationInfoService;
+@inject NavigationManager Navigation;
+@using static BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService;
+
+
+<style>
+@@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100;300&display=swap');
+
+    .roboto-thin {
+        font-family: "Roboto", sans-serif;
+        font-weight: 100;
+        font-style: normal;
+    }
+
+    .roboto-light {
+        font-family: "Roboto", sans-serif;
+        font-weight: 300;
+        font-style: normal;
+    }
+
+</style>
+@if (true) {
+    <div style="overflow-y: auto; scrollbar-color: rgb(0,230,118) rgb(34, 34, 34, 0.0); height: calc(100vh - (var(--mud-appbar-height)) + 16px)"> <!-- maybe hide this on no input --> 
+        <MudExpansionPanel @bind-Expanded="NavigationInfoService.homePageDrawerOpen" @ref="homePageDrawerExpansionPanel" Style="background-color: #151515">
+            <MudStack Spacing="8">
+                <MudStack Row="true" Style="display: flex; align-items: center">
+                    <MudText>Filter by tag:</MudText>
+                    <MudAutocomplete @bind-Value="filterTagVal" T="string" SearchFunc="Search2" CoerceValue="true">
+
+                    </MudAutocomplete>
+                </MudStack>
+                <MudStack Row="true" Spacing="5" Style="display: flex; align-items: center">
+                    <MudText Inline="true" Style="@($"white-space: nowrap; color: {(filterSearchWithinValEnabled ? "#fafafa" : "gray")}")">Search within @(filterSearchWithinVal < 101 ? filterSearchWithinVal + " miles" : "any distance") </MudText>
+                    
+                    <MudSlider T="int" Min="5" Max="101" Step="1" @bind-Value="filterSearchWithinVal" Disabled="@(!filterSearchWithinValEnabled)" />
+                    <MudCheckBox T="bool" @bind-Value="filterSearchWithinValEnabled" />
+                </MudStack>
+                <!-- <MudStack Row="true" Spacing="5" Style="display: flex; align-items: center">
+                    <MudText Inline="true" Style="white-space: nowrap">Search location: </MudText>
+                    <MudTextField Lines="1" MaxLines="1" T="string" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Map" OnAdornmentClick="DebugRenderInfo" />
+                </MudStack> -->
+                <MudStack Row="true">
+                    <MudButton OnClick="FilterSortPresentedList">Confirm</MudButton>
+                    <MudIconButton OnClick="@( async () => {await UpdateExtendedListingData(); ListingDataStorageService.homeListingContentLoaded = true;})" Icon="@Icons.Material.Filled.Refresh" />
+                </MudStack>
+            </MudStack>
+            
+        </MudExpansionPanel>
+        <!--<MudButton OnClick="DebugRenderInfo" >DEF</MudButton>
+        <MudText>@debugString</MudText>-->
+        <Animation Effect="Effect.ZoomIn" Speed="Speed.Faster" Enabled="@NavigationInfoService.enableAnimation">
+            <Animation Effect="Effect.FadeInUp" Speed="Speed.Faster" Enabled="@NavigationInfoService.enableAnimation" OnAnimationEnd="@(() => {NavigationInfoService.enableAnimation = false;})">
+                <!--<MudButton OnClick="@( async () => {await UpdateExtendedListingData(); })">ABC</MudButton> -->
+
+                <div>  <!-- style=" background-image: linear-gradient(to bottom, #323232, #2a2a2a, #232323, #1b1b1b, #141414);" -->
+                    <br />
+                    <MudStack Spacing="5">
+                        @if (ListingDataStorageService.extendedListingData.Count == 0) {
+                            <MudText Style="margin: auto; padding-top: 50vh">Not seeing any listings? Try expanding your search filters or refreshing!</MudText>
+                        }
+                        @foreach (ExtendedListingData exLD in ListingDataStorageService.extendedListingData)
+                        {
+                            <Animation Effect="Effect.FadeInUp" Speed="Speed.Fast" Delay="@TimeSpan.FromMilliseconds(450)" Enabled="@ListingDataStorageService.homeListingContentLoaded" OnAnimationEnd="@(() => {ListingDataStorageService.homeListingContentLoaded = false;})">
+                                <MudCard Elevation="8" Style="border-radius: 20px; margin: auto; width: 95vw">
+                                    <MudCardMedia Image="@exLD.imageUrl" Style="height: 25vh" />
+                                    <MudCardContent>
+                                        <MudStack Spacing="2">
+                                            <MudStack Style="display: flex; align-items: center" Row="true">
+                                                @if (exLD.accountVerified == false)
+                                                {
+                                                    <MudAvatar Size="Size.Small">
+                                                        @if (exLD.profileUrl != "")
+                                                        {
+                                                            <MudImage Src="@exLD.profileUrl" />
+                                                        }
+                                                        else if (exLD.accountType == "Institution")
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Domain" Color="Color.Primary" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Person" />
+                                                        }
+                                                    </MudAvatar>
+                                                }
+                                                else
+                                                {
+                                                    <MudBadge Icon="@Icons.Material.Filled.Check" Color="Color.Primary" Bordered="true" Overlap="true">
+                                                        <MudAvatar Size="Size.Small">
+                                                            @if (exLD.profileUrl != "")
+                                                            {
+                                                                <MudImage Src="@exLD.profileUrl" />
+                                                            }
+                                                            else if (exLD.accountType == "Institution")
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.Domain" Color="Color.Primary" />
+                                                            }
+                                                            else
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.Person" />
+                                                            }
+                                                        </MudAvatar>
+                                                    </MudBadge>
+                                                }
+
+                                                <MudText Class="roboto-light">@exLD.accountName</MudText>
+                                            </MudStack>
+
+                                            <h3>@exLD.address</h3>
+                                            <MudStack Row="true" Spacing="0">
+                                                @if (exLD.startDateTimestamp == exLD.endDateTimestamp)
+                                                {
+                                                    <MudText Class="roboto-light">@DateTimeOffset.FromUnixTimeSeconds(exLD.startDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd")</MudText>
+                                                }
+                                                else
+                                                {
+                                                    <MudText Class="roboto-light">@DateTimeOffset.FromUnixTimeSeconds(exLD.startDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd") - @DateTimeOffset.FromUnixTimeSeconds(exLD.endDateTimestamp).ToLocalTime().DateTime.ToString("MMM dd")</MudText>
+                                                }
+                                                <MudText Class="roboto-light" Style="white-space: pre"> | @DateTimeOffset.FromUnixTimeSeconds(exLD.startTimeTimestamp).ToLocalTime().DateTime.ToString("hh:mm tt") - @DateTimeOffset.FromUnixTimeSeconds(exLD.endTimeTimestamp).ToLocalTime().DateTime.ToString("hh:mm tt")</MudText>
+                                            </MudStack>
+
+                                            <MudTextField ReadOnly="true" MaxLines="3" Value="@exLD.description" />
+                                        </MudStack>
+
+                                    </MudCardContent>
+                                    <MudCardActions>
+                                        <MudIconButton Icon="@Icons.Material.Filled.West" OnClick="@(() => {
+                        ListingDataStorageService.presentedExtendedListing = exLD;
+                        NavigationInfoService.prevPage = "/";
+                        Navigation.NavigateTo("/viewListing");
+})" />
+                                        <MudChipSet T="string">
+                                            @foreach (KeyValuePair<string, string> tagPair in exLD.tags.ToArray())
+                                            {
+                                                <MudChip T="string" Style="@($"color: {tagPair.Value}; border-color: {tagPair.Value}")" Text="@tagPair.Key" Variant="Variant.Outlined" />
+                                            }
+                                        </MudChipSet>
+                                    </MudCardActions>
+                                </MudCard>
+                            </Animation>
+                        }
+                        <br />
+                        <br />
+                    </MudStack>
+                </div>
+                
+            </Animation>
+        </Animation>
+        
+    </div>
+}
+@code {
+    string testString = "abc123123123";
+    string pressedVal = "not yet";
+    string filterTagVal;
+    string[] autoDefinedFilterTags = { "pick-up", "volunteering" };
+    string debugString = "aoeaoe";
+    int filterSearchWithinVal = 25; bool filterSearchWithinValEnabled = false;
+    bool firstRenderWithSignIn = false;
+    double[] latitudeLongitudeLocation = { -360.0, -360.0 };
+    MudExpansionPanel homePageDrawerExpansionPanel; 
+    async Task UpdateExtendedListingData()
+    {
+        pressedVal = "pressed";
+        if (SharedRefVarService.loggedInStatus == false)
+        {
+            return;
+        }
+
+        var receivedData = await FirebaseAuthService.firestore.Collection("listingInfo").GetSnapshotAsync();
+        ListingDataStorageService.UpdateExtendedListingData(receivedData);
+        testString = ListingDataStorageService.extendedListingData.Count.ToString();
+        return;
+    }
+    async void FilterSortPresentedList()
+    {
+        await Task.Run(async () => { await UpdateExtendedListingData(); });
+        ListingDataStorageService.ExtendedListingDataFilterByTag(filterTagVal);
+        if (filterSearchWithinValEnabled == true)
+        {
+            await DebugRenderInfo();
+            ListingDataStorageService.ExtendedListingDataFilterByDistance(latitudeLongitudeLocation[0], latitudeLongitudeLocation[1], filterSearchWithinVal);
+        }
+        ListingDataStorageService.homeListingContentLoaded = true;
+        NavigationInfoService.homePageDrawerOpen = !NavigationInfoService.homePageDrawerOpen;
+        await homePageDrawerExpansionPanel.CollapseAsync();
+
+    }
+    async Task DebugRenderInfo()
+    {
+        try
+        {
+            GeolocationRequest requestLocation = new GeolocationRequest(GeolocationAccuracy.Medium);
+            Location deviceLocation = await Geolocation.GetLocationAsync(requestLocation);
+
+            debugString = $"{deviceLocation.Latitude}, {deviceLocation.Longitude}";
+            latitudeLongitudeLocation[0] = deviceLocation.Latitude;
+            latitudeLongitudeLocation[1] = deviceLocation.Longitude;
+
+        } catch (Exception ex)
+        {
+             
+            await App.Current.MainPage.DisplayAlert("Windows-specific error", "On Windows, the \"Allow access to location on this device\" permission must be granted to this application in the settings app.", "👍");
+            
+            debugString = ex.Message;
+        }
+
+
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRenderWithSignIn == false && SharedRefVarService.loggedInStatus == true)
+        {
+            await UpdateExtendedListingData();
+            firstRenderWithSignIn = true;
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    private async Task<IEnumerable<string>> Search2(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return new string[0];
+        }
+        
+        return autoDefinedFilterTags.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+}

@@ -1,0 +1,500 @@
+﻿@page "/account"
+@inject BlazorMudBlazorCACApp1.Components.Services.SharedRefVarService SharedRefVarService
+@inject BlazorMudBlazorCACApp1.Components.Services.FirebaseAuthService FirebaseAuthService
+@inject BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService ListingDataStorageService;
+@inject BlazorMudBlazorCACApp1.Components.Services.NavigationInfoService NavigationInfoService
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+@using System.Text.Json
+@using CommunityToolkit.Maui.Converters
+@using UserCreatedListingData = BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService.UserCreatedListingData;
+<div style="height: calc(100vh - (var(--mud-appbar-height)) + 16px); display: flex; justify-content: center; align-items: center">
+    <Animation Effect="Effect.ZoomIn" Speed="Speed.Faster" Enabled="@NavigationInfoService.enableAnimation" Style="width: 100vw;">
+        <Animation Effect="Effect.FadeInUp" Speed="Speed.Faster" Enabled="@NavigationInfoService.enableAnimation"  Style="width: 100vw" OnAnimationEnd="@(() => {NavigationInfoService.enableAnimation = false;})">
+            <MudPaper Width="95%" Style="margin:auto; justify-content: center; align-content: center; background-color: #181818; border-radius: 16dp">
+                <MudPaper Width="95%" Style="margin:auto; background-color: transparent; padding-top: 20px; padding-bottom: 20px; box-shadow: none">
+                    @if (SharedRefVarService.loggedInStatus == false)
+                    {
+                        <h1 style="display: flex; justify-content: center">
+                            Account
+                        </h1>
+                    }
+                    else
+                    {
+                        <MudStack Row=true style="display: flex; justify-content: center">
+                            <Animation Effect="Effect.FadeInDown" Speed="Speed.Fast" Delay="@TimeSpan.FromMilliseconds(800.0)" Enabled="true" >
+                                <h1>@NavigationInfoService.settingsGreetingText</h1>
+                            </Animation>
+                            <Animation Effect="Effect.FadeInUp" Speed="Speed.Fast" Delay="@TimeSpan.FromMilliseconds(1200.0)" Enabled="true">
+                                <h1 style="@($"color: {Colors.Green.Accent3}")">@SharedRefVarService.username</h1>
+                            </Animation>
+                            
+                        </MudStack>
+                    }
+
+                    <br />
+                    @if (SharedRefVarService.loggedInStatus == false)
+                    {
+                        <MudForm @ref="formVal" @bind-IsValid="@isValidFormSuccess">
+                            <MudStack Spacing="5">
+                                <MudTextField Label="Account name" Lines="1" MaxLines="1" Required="true" T="string" Variant="Variant.Filled" Adornment="Adornment.Start" @bind-Value="formLoginUsername" />
+                                <MudTextField Label="Email address" Lines="1" MaxLines="1" Required="true" T="string" Variant="Variant.Filled" Adornment="Adornment.Start" Validation="@(new EmailAddressAttribute() {ErrorMessage = "Please enter a valid email address."})" @bind-Value="formLoginEmail" />
+                                <MudTextField InputType="@formPasswordInputType" Label="Password" Lines="1" MaxLines="1" Required="true" T="string" Variant="Variant.Filled" Adornment="Adornment.End" AdornmentIcon="@formPasswordInputIcon" OnAdornmentClick="checkPasswordVisibilityStatus" @bind-Value="formLoginPassword" />
+                                <MudTabs Centered="true" ActiveTabClass="border-solid border-2 mud-border-primary" Color="Color.Surface">
+                                    <MudTabPanel Text="Individual" OnClick="@(() => {formLoginAccountType = "Individual";})" />
+                                    <MudTabPanel Text="Institution" OnClick="@(() => {formLoginAccountType = "Institution";})" />
+                                </MudTabs>
+                                <MudText Color="Color.Error"><b><i>@authenticationErrorMessage</i></b></MudText>
+                                <MudStack Row="true" StretchItems="StretchItems.All">
+                                    <MudButton Variant="Variant.Filled" style="@($"color: {Colors.Green.Accent2}")" OnClick="checkSignUpFormStatus">Sign Up</MudButton>
+                                    <MudButton Variant="Variant.Filled" style="@($"color: {Colors.Green.Accent2}")" OnClick="checkSignInFormStatus">Sign In</MudButton>
+                                </MudStack>
+                            </MudStack>
+                        </MudForm>
+                    }
+                    else
+                    {
+                        <div style="display: flex; justify-content: center">
+                            <MudStack>
+                                <MudAvatar Color="Color.Dark" Style="height: 10vh; width: 10vh;">
+                                    @if (SharedRefVarService.profileUrl == "" || SharedRefVarService.profileUrl == "Individual")
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Person" Color="Color.Primary" OnClick="@(() => {setProfileImageUrlVisibility = true;})" />
+                                    }
+                                    else if (SharedRefVarService.profileUrl == "Institution")
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Domain" Color="Color.Primary" OnClick="@(() => {setProfileImageUrlVisibility = true;})" />
+                                    }
+                                    else
+                                    {
+                                        <button style="@($"background-color: red; background-image: url('{SharedRefVarService.profileUrl}'); width: 10vh; height: 10vh")" class="profileImage" onclick="@(() => {setProfileImageUrlVisibility = true;})" />
+                                    }
+                                </MudAvatar>
+                                <MudText Style="display: flex; justify-content: center"><b>@SharedRefVarService.accountType</b></MudText>
+                            </MudStack>
+
+                        </div>
+                        <br />
+                        <MudExpansionPanel @bind-Expanded="NavigationInfoService.settingVolunteerInfoPageOpen">
+                            <TitleContent>
+                                <MudIcon Icon="@Icons.Material.Filled.Person" />
+                            </TitleContent>
+                            <ChildContent>
+                                <MudPaper Elevation="0">
+                                    <MudStack Spacing="5">
+                                        <MudText Style=" margin:auto"><i>This information may be shared to events/listings that request it.</i></MudText>
+                                        <MudForm>
+                                            <MudStack Spacing="5">
+                                                <MudStack Row="true" Style="display: flex; align-items: center; justify-content: center">
+                                                    <MudTextField Variant="Variant.Outlined" Label="Name" T="string" @ref="userVolunteerInfoNameField" @bind-Value="SharedRefVarService.shortname"/>
+                                                </MudStack>
+                                                <MudStack Row="true" Style="display: flex; align-items: center; justify-content: center">
+                                                    <MudTextField Variant="Variant.Outlined" Label="Age" T="int" InputMode="InputMode.numeric" @ref="userVolunteerInfoAgeField" @bind-Value="SharedRefVarService.age" />
+                                                </MudStack>
+                                                <MudButton OnClick="UpdateUserVolunteerInformation">Update information</MudButton>
+                                            </MudStack>
+
+                                        </MudForm>
+
+                                    </MudStack>
+                                    <!--
+                                    <MudButton Variant="Variant.Outlined" OnClick="syncListingsToAccount">Sync</MudButton>
+                                    <MudButton Variant="Variant.Filled" OnClick="getFromSyncedAccountListings">Get Synced</MudButton> -->
+                                
+                                </MudPaper>
+
+                            </ChildContent>
+                            
+
+                        </MudExpansionPanel>
+                        <br />
+                        <br />
+                        <br />
+                        <MudStack Spacing="3">
+
+
+                            <MudButton OnClick="signOutClientAccount" Color="Color.Secondary">Sign Out</MudButton>
+                            <MudButton OnClick="deleteClientAccount" Color="Color.Error">Delete Account</MudButton>
+                        </MudStack>
+
+                    }
+
+                </MudPaper>
+            </MudPaper>
+        </Animation>
+    </Animation>
+    
+        
+        <!-- <MudFab StartIcon="@Icons.Material.Filled.Add" Style="position: absolute; bottom: 5px; right: 100px" /> -->
+    
+    
+</div>
+<MudDialog @bind-Visible="setProfileImageUrlVisibility" >
+    <TitleContent>Set Profile Image URL</TitleContent>
+    <DialogContent>
+        <div style="display: flex; justify-content: center; align-items: center; flex-direction: column">
+            <MudTextField T="string" Adornment="Adornment.End" ReadOnly="true" Variant="Variant.Outlined" @bind-Text="setProfileImageByFilePathField" AdornmentIcon="@Icons.Material.Outlined.PhotoLibrary" OnAdornmentClick="ChangeUserProfilePhotoByImage" />
+            <br />
+            <MudText>OR</MudText>
+            <br />
+            <MudTextField @ref="setProfileImageUrlDialogTextField" Adornment="Adornment.Start" Variant="Variant.Outlined" Label="Enter image URL" Value="@("")"  T="string" MaxLines="1" InputType="InputType.Url" />
+
+        </div>
+        </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => {setProfileImageUrlVisibility = false;})">Go Back</MudButton>
+        <MudButton OnClick="ChangeUserProfilePhotoUrlNew">Change</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    MudForm formVal;
+    MudTextField<string> formPasswordInputVal; bool formPasswordInputShown = false; 
+    string formPasswordInputIcon = Icons.Material.Outlined.Visibility; InputType formPasswordInputType = InputType.Password;
+    bool isValidFormSuccess;
+    string formLoginUsername = "";
+    string formLoginEmail = "";
+    string formLoginPassword = "";
+    string formLoginAccountType = "Individual";
+    string loggedInVals = "";
+    string authenticationErrorMessage = "";
+    string userIdToken = "";
+    MudTextField<string> userVolunteerInfoNameField;
+    MudTextField<int> userVolunteerInfoAgeField;
+
+    //
+    bool setProfileImageUrlVisibility = false;
+    MudTextField<string> setProfileImageUrlDialogTextField;
+    string setProfileImageByFilePathField = "";
+    //
+    /*Random randomNumGenerator = new Random();
+    List<string> logInGreetings = new List<string>
+        {
+        "Hello, ", "Hey, ", "Salutations, ", "Greetings, "
+    }; */
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+    }
+    private void checkPasswordVisibilityStatus()
+    {
+        if (formPasswordInputShown == false)
+        {
+            formPasswordInputIcon = Icons.Material.Outlined.VisibilityOff;
+            formPasswordInputType = InputType.Text;
+        } else {
+            formPasswordInputIcon = Icons.Material.Outlined.Visibility;
+            formPasswordInputType = InputType.Password;
+        }
+        formPasswordInputShown = !formPasswordInputShown;
+    }
+    private void syncListingsToAccount()
+    {
+        Dictionary<string, object> syncUpdateDictionary = new Dictionary<string, object>
+        {
+            {"interestedListings", ListingDataStorageService.ReturnIdsOfSavedListings()},
+            {"myListings", ListingDataStorageService.ReturnIdsOfUserListings()}
+        };
+        var updateDocRef = FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.client.User.Uid);
+        updateDocRef.UpdateAsync(syncUpdateDictionary);
+
+    }
+    private async Task getFromSyncedAccountListings()
+    {
+        var accountDocRef = await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.client.User.Uid).GetSnapshotAsync(); // this is the userInfo of the current user
+        string[] interestedListings = accountDocRef.GetValue<string[]>("interestedListings");
+        string[] myListings = accountDocRef.GetValue<string[]>("myListings");
+        Dictionary<string, BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService.ExtendedListingData> savedExtendedListingDataFromSync = new Dictionary<string, Services.ListingDataStorageService.ExtendedListingData>();
+        // use an alias for this later
+
+        // getting saved/interested listings for user
+        foreach (string interestedListingID in interestedListings)
+        {
+            var savedListingDocumentReference = await FirebaseAuthService.firestore.Collection("listingInfo").Document(interestedListingID).GetSnapshotAsync();
+            var objectData = savedListingDocumentReference.ToDictionary();
+            Dictionary<string, object> nestedTagInformation = (Dictionary<string, object>)objectData["tags"];
+            Dictionary<string, string> castedTagInformation = new Dictionary<string, string>();
+            foreach (string k in nestedTagInformation.Keys)
+            {
+                castedTagInformation.Add(k, (string)nestedTagInformation[k]);
+            }
+            savedExtendedListingDataFromSync.Add(interestedListingID, new BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService.ExtendedListingData
+                {
+                    accountId = (string)objectData["accountId"],
+                    accountType = (string)objectData["accountType"],
+                    accountVerified = (bool)objectData["accountVerified"],
+                    address = (string)objectData["address"],
+                    addressLat = (double)objectData["addressLat"],
+                    addressLon = (double)objectData["addressLon"],
+                    description = (string)objectData["description"],
+                    endDateTimestamp = (long)objectData["endDateTimestamp"],
+                    endTimeTimestamp = (long)objectData["endTimeTimestamp"],
+                    imageUrl = (string)objectData["imageUrl"],
+                    listingId = (string)objectData["listingId"], // same as d.Id
+                    profileUrl = (string)objectData["profileUrl"],
+                    startDateTimestamp = (long)objectData["startDateTimestamp"],
+                    startTimeTimestamp = (long)objectData["startTimeTimestamp"],
+                    tags = castedTagInformation,
+                    carouselDisplay = savedListingDocumentReference.GetValue<string[]>("carouselDisplay"),
+                    accountName = (string)objectData["accountName"],
+                    requestsSignUpInfo = (bool)objectData["requestsSignUpInfo"],
+                    signedUpUsers = new Dictionary<string, Dictionary<string, string>>() // no need to save this information, maybe check later to see if just using .GetValue is more viable
+                });
+        }
+        ListingDataStorageService.savedExtendedListingData = savedExtendedListingDataFromSync;
+        // getting user-created listings; user UserCreatedListingData for alias for BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService.UserCreatedListingData
+        List<UserCreatedListingData> userCreatedListingDataFromSync = new List<UserCreatedListingData>();
+        foreach (string myListingID in myListings)
+        {
+            var userCreatedListingDocumentReference = await FirebaseAuthService.firestore.Collection("listingInfo").Document(myListingID).GetSnapshotAsync();
+            var objectData = userCreatedListingDocumentReference.ToDictionary();
+            Dictionary<string, object> nestedTagInformation = (Dictionary<string, object>)objectData["tags"];
+            Dictionary<string, string> castedTagInformation = new Dictionary<string, string>();
+            foreach (string k in nestedTagInformation.Keys)
+            {
+                castedTagInformation.Add(k, (string)nestedTagInformation[k]);
+            }
+            userCreatedListingDataFromSync.Add(new UserCreatedListingData
+                {
+                    address = (string)objectData["address"],
+                    addressLat = (double)objectData["addressLat"],
+                    addressLon = (double)objectData["addressLon"],
+                    accountId = (string)objectData["accountId"],
+                    listingId = (string)objectData["listingId"],
+                    startDateTimestamp = (long)objectData["startDateTimestamp"],
+                    startTimeTimestamp = (long)objectData["startTimeTimestamp"],
+                    endDateTimestamp = (long)objectData["endDateTimestamp"],
+                    endTimeTimestamp = (long)objectData["endTimeTimestamp"],
+                    imageUrl = (string)objectData["imageUrl"],
+                    description = (string)objectData["description"],
+                    requestsSignUpInfo = (bool)objectData["requestsSignUpInfo"],
+                    carouselDisplay = userCreatedListingDocumentReference.GetValue<string[]>("carouselDisplay"),
+                    tags = castedTagInformation
+                });
+        }
+        ListingDataStorageService.userCreatedListingData = userCreatedListingDataFromSync;
+
+    }
+    private async Task checkSignUpFormStatus()
+    {
+        await formVal.Validate();
+        if (isValidFormSuccess == true)
+        {
+            //userIdToken = await FirebaseAuthService.SignUp(formLoginEmail, formLoginPassword); @inject BlazorMudBlazorCACApp1.Components.Services.FirebaseAuthService FirebaseAuthService
+            try
+            {
+                FirebaseAuthService.userCredentialStored = await FirebaseAuthService.client.CreateUserWithEmailAndPasswordAsync(formLoginEmail, formLoginPassword);
+                userIdToken = await FirebaseAuthService.client.User.GetIdTokenAsync();
+                await FirebaseAuthService.client.User.ChangeDisplayNameAsync(formLoginUsername);
+                string[] emptyStringArray = { };
+                Dictionary<string, object> newUserInfo = new Dictionary<string, object>
+                {
+                    {"verified", false},
+                    {"accountType", formLoginAccountType},
+                    {"photoUrl", ""},
+                    {"createdListings", 0},
+                    {"interestedListings",  emptyStringArray},
+                    {"myListings", emptyStringArray},
+                    {"shortname", ""},
+                    {"age", 0}
+                };
+                await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.userCredentialStored.User.Uid).SetAsync(newUserInfo);
+                SharedRefVarService.username = FirebaseAuthService.client.User.Info.DisplayName;
+                SharedRefVarService.email = formLoginEmail;
+                SharedRefVarService.password = formLoginPassword;
+                SharedRefVarService.verified = false;
+                SharedRefVarService.accountType = formLoginAccountType;
+                SharedRefVarService.profileUrl = "";
+                SharedRefVarService.loggedInStatus = true;
+                SaveLogInDetails(SharedRefVarService.email, SharedRefVarService.password);
+            } catch (Firebase.Auth.FirebaseAuthException ex)
+            {
+                int intEquivalent = (int)ex.Reason;
+                authenticationErrorMessage = "Invalid credentials for email/password sign-up - Error code: " + intEquivalent.ToString();
+            }
+
+        }
+    }
+    private async Task checkSignInFormStatus()
+    {
+        await formVal.Validate();
+        if (isValidFormSuccess == true)
+        {
+            //userIdToken = await FirebaseAuthService.SignUp(formLoginEmail, formLoginPassword); @inject BlazorMudBlazorCACApp1.Components.Services.FirebaseAuthService FirebaseAuthService
+            try
+            {
+                FirebaseAuthService.userCredentialStored = await FirebaseAuthService.client.SignInWithEmailAndPasswordAsync(formLoginEmail, formLoginPassword);
+                userIdToken = await FirebaseAuthService.client.User.GetIdTokenAsync();
+                SharedRefVarService.username = FirebaseAuthService.client.User.Info.DisplayName;
+                SharedRefVarService.email = formLoginEmail;
+                SharedRefVarService.password = formLoginPassword;
+                var temporaryAdditionalUserData = await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.userCredentialStored.User.Uid).GetSnapshotAsync();
+                Dictionary<string, object> additionalUserData = temporaryAdditionalUserData.ToDictionary();
+                SharedRefVarService.verified = (bool)additionalUserData["verified"];
+                SharedRefVarService.accountType = (string)additionalUserData["accountType"];
+                SharedRefVarService.profileUrl = (string)additionalUserData["photoUrl"];
+                //SharedRefVarService.shortname = (string)additionalUserData["shortname"];
+                SharedRefVarService.loggedInStatus = true;
+
+                SaveLogInDetails(SharedRefVarService.email, SharedRefVarService.password);
+                await getFromSyncedAccountListings();
+                ListingDataStorageService.SaveSavedExtendedListingList();
+                ListingDataStorageService.SaveUserCreatedList();
+            } catch (Firebase.Auth.FirebaseAuthException ex)
+            {
+                int intEquivalent = (int)ex.Reason;
+                if (intEquivalent == 17)
+                {
+                    authenticationErrorMessage = "Incorrect email/password combination";
+                } else
+                {
+                    authenticationErrorMessage = "Invalid credentials for sign-in - Error code: " + intEquivalent.ToString();
+                }
+
+            } catch (Exception ex)
+            {
+                await App.Current.MainPage.DisplayAlert(ex.Source, ex.Message, "Ok");
+            }
+
+        }
+    }
+    private async Task UpdateUserVolunteerInformation()
+    {
+        Dictionary<string, object> updateShortNameAndAge = new Dictionary<string, object>
+        {
+            {"shortname", SharedRefVarService.shortname},
+            {"age", SharedRefVarService.age}
+        };
+        await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.client.User.Uid).SetAsync(updateShortNameAndAge, Google.Cloud.Firestore.SetOptions.MergeAll);
+    }
+    private void SaveLogInDetails(string email, string password)
+    {
+        File.WriteAllLines(Path.Combine(FileSystem.Current.AppDataDirectory, "rememberCredentials.txt"), new List<string> {email, password});
+    }
+    private async Task deleteClientAccount()
+    {
+        await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.userCredentialStored.User.Uid).DeleteAsync();
+        await FirebaseAuthService.userCredentialStored.User.DeleteAsync();
+        ResetFormAndUserVariablesToDefaults();
+    }
+    private async Task signOutClientAccount()
+    {
+        FirebaseAuthService.client.SignOut();
+        FirebaseAuthService.userCredentialStored = null;
+        ListingDataStorageService.WipeOfflineListingsOnSignOut();
+        ResetFormAndUserVariablesToDefaults();
+    }
+    private void ResetFormAndUserVariablesToDefaults()
+    {
+        SharedRefVarService.loggedInStatus = false;
+        try
+        {
+            // wrap in "if path exists"
+            File.Delete(Path.Combine(FileSystem.Current.AppDataDirectory, "rememberCredentials.txt"));
+        } catch (Exception ex)
+        {
+            //pass
+        }
+        // reset variables to defaults
+        SharedRefVarService.email = ""; SharedRefVarService.username = ""; SharedRefVarService.password = ""; SharedRefVarService.verified = false; SharedRefVarService.accountType = "Individual"; SharedRefVarService.shortname = ""; formLoginEmail = ""; formLoginPassword = ""; formLoginPassword = "";
+
+    }
+    private async Task ChangeUserProfilePhotoUrl()
+    {
+        string newUrl = await Application.Current.MainPage.DisplayPromptAsync("Set Photo URL", "Place your URL here:");
+
+        UrlAttribute urlVar = new UrlAttribute();
+        if (urlVar.IsValid(newUrl) || newUrl == "") // change 1
+        {
+            SharedRefVarService.profileUrl = newUrl;
+            Dictionary<string, object> updateProfileUrl = new Dictionary<string, object>
+            {
+                {"photoUrl", newUrl}
+            };
+            await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.userCredentialStored.User.Uid).SetAsync(updateProfileUrl, Google.Cloud.Firestore.SetOptions.MergeAll);
+
+        }
+
+    }
+    private async Task ChangeUserProfilePhotoUrlNew()
+    {
+        string newUrl = setProfileImageUrlDialogTextField.Text;
+        UrlAttribute urlVar = new UrlAttribute();
+        if (urlVar.IsValid(newUrl) || newUrl == "") // change 1
+        {
+            SharedRefVarService.profileUrl = newUrl;
+            Dictionary<string, object> updateProfileUrl = new Dictionary<string, object>
+            {
+                {"photoUrl", newUrl}
+            };
+            await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.userCredentialStored.User.Uid).SetAsync(updateProfileUrl, Google.Cloud.Firestore.SetOptions.MergeAll);
+
+        }
+        setProfileImageUrlVisibility = false;
+
+    }
+    private async Task ChangeUserProfilePhotoByImage()
+    {
+        try
+        {
+            FileResult selectedImage = await MediaPicker.PickPhotoAsync();
+            var imageStream = await selectedImage.OpenReadAsync();
+
+            MemoryStream imageMemory = new MemoryStream();
+            imageStream.CopyTo(imageMemory);
+            setProfileImageByFilePathField = selectedImage.FullPath;
+            byte[] imageBytes = imageMemory.ToArray();
+            //imageStream.Close();
+            //imageMemory.Dispose();
+            string imageBase64 = System.Convert.ToBase64String(imageBytes);
+            HttpClient imgBBClient = SharedRefVarService.sharedHttpClient;//new HttpClient();
+            MultipartFormDataContent parameters = new MultipartFormDataContent();
+            parameters.Add(new StringContent(Environment.GetEnvironmentVariable("IMG_BB_APIKEY")), "key");
+            parameters.Add(new StringContent(imageBase64), "image");
+            HttpResponseMessage response = await imgBBClient.PostAsync("https://api.imgbb.com/1/upload", parameters);
+            if (response != null)
+            {
+                response.EnsureSuccessStatusCode();
+                string stringObjectResponse = await response.Content.ReadAsStringAsync();
+                //Dictionary<string, object> objectResponse = JsonSerializer.Deserialize<Dictionary<string, object>>(stringObjectResponse);
+                // manual quick and dirty extraction of url
+                int urlStartIndex = stringObjectResponse.IndexOf("url\":") + 5;
+                int urlEndIndex = urlStartIndex; int quotationMarksFound = 0;
+                while (quotationMarksFound < 2)
+                {
+                    if (stringObjectResponse[urlEndIndex] == '"')
+                    {
+                        quotationMarksFound++;
+                    }
+                    urlEndIndex++;
+                }
+                string newUrl = stringObjectResponse.Substring(urlStartIndex+1, (urlEndIndex-urlStartIndex-2)).Replace(@"\", "");
+                UrlAttribute urlVar = new UrlAttribute();
+                if (urlVar.IsValid(newUrl) || newUrl == "") // change 1
+                {
+                    SharedRefVarService.profileUrl = newUrl;
+                    Dictionary<string, object> updateProfileUrl = new Dictionary<string, object>
+                    {
+                        {"photoUrl", newUrl}
+                    };
+                    await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.userCredentialStored.User.Uid).SetAsync(updateProfileUrl, Google.Cloud.Firestore.SetOptions.MergeAll);
+
+                }
+                setProfileImageUrlDialogTextField.Text = urlVar.IsValid(newUrl).ToString();
+                //setProfileImageUrlVisibility = false;
+                //await ChangeUserProfilePhotoUrlNew();
+
+            }
+            
+        } catch (Exception ex)
+        {
+            setProfileImageUrlDialogTextField.ErrorText = ex.Message;
+        }
+
+    }
+
+
+
+}
+    

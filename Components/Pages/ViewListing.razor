@@ -1,0 +1,228 @@
+﻿@page "/viewListing"
+@inject BlazorMudBlazorCACApp1.Components.Services.SharedRefVarService SharedRefVarService;
+@inject BlazorMudBlazorCACApp1.Components.Services.FirebaseAuthService FirebaseAuthService;
+@inject BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService ListingDataStorageService;
+@inject BlazorMudBlazorCACApp1.Components.Services.NavigationInfoService NavigationInfoService;
+@inject NavigationManager Navigation;
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100;300&display=swap');
+
+    .roboto-thin {
+        font-family: "Roboto", sans-serif;
+        font-weight: 100;
+        font-style: normal;
+    }
+
+    .roboto-light {
+        font-family: "Roboto", sans-serif;
+        font-weight: 300;
+        font-style: normal;
+    }
+
+</style>
+
+<div style="@($"height: 25vh; width: 100vw; background-image: url('{ListingDataStorageService.presentedExtendedListing.imageUrl}'); background-size: cover; display: flex;")" class="listingImage">
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowLeft" OnClick="@(() => {Navigation.NavigateTo(NavigationInfoService.prevPage);})" Style="margin-bottom: auto; margin-right: auto; color: white; background-color: #1f1f1ff0; position: relative; top: 10px; left: 10px" DropShadow="true" />
+</div>
+<div style="@("height: calc(75vh - (var(--mud-appbar-height)) + 16px); overflow-y: auto; background-color: #181818; width: 100vw; padding: 14px; padding-left:5vw; padding-right:5vw")">
+    <MudStack Style="margin: auto; width: auto">
+        @if (ListingDataStorageService.presentedExtendedListing.accountId == FirebaseAuthService.client.User.Uid)
+        {
+            <!-- <br /> testing just using padding -->
+        }
+        <!-- some extra margin from top in case the toggle button is not there to take up that space-->
+        <MudStack Row="true" Style="display: flex; align-items: center">
+            <h1>@ListingDataStorageService.presentedExtendedListing.address</h1>
+            <MudSpacer />
+            <MudStack Row="true" Style="display: flex; align-items:center">
+                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Large" Style="padding-top: 10px">
+                    <MudMenuItem Icon="@Icons.Material.Outlined.Map" Href="@($"https://maps.google.com/?q={ListingDataStorageService.presentedExtendedListing.address}")">Open in Maps</MudMenuItem>
+                </MudMenu>
+                @if (ListingDataStorageService.presentedExtendedListing.accountId != FirebaseAuthService.client.User.Uid)
+                {
+                    @if (ListingDataStorageService.presentedExtendedListing.minimumAge > SharedRefVarService.age)
+                    {
+                        <MudTooltip ShowOnClick="true">
+                            <ChildContent>
+                                <MudToggleIconButton Toggled="(ListingDataStorageService.savedExtendedListingData.ContainsKey(ListingDataStorageService.presentedExtendedListing.listingId))" ToggledChanged="AddToSavedExtendedDataListChanged" Size="Size.Large" ToggledSize="Size.Large" Style="margin: auto; padding-top: 25px" Icon="@Icons.Material.Outlined.BookmarkAdd" ToggledIcon="@Icons.Material.Outlined.BookmarkAdded" Color="Color.Default" ToggledColor="Color.Primary" Disabled="true" />
+
+                            </ChildContent>
+                            <TooltipContent>
+                                <p>The minimum required age is @ListingDataStorageService.presentedExtendedListing.minimumAge.</p>
+                                <br />
+                                <p>You do not meet the age requirement for this listing.</p>
+                                <br />
+                                <p>You can update your age on your profile page.</p>
+                            </TooltipContent>
+                        </MudTooltip>
+                    } else
+                    {
+                        <MudToggleIconButton Toggled="(ListingDataStorageService.savedExtendedListingData.ContainsKey(ListingDataStorageService.presentedExtendedListing.listingId))" ToggledChanged="AddToSavedExtendedDataListChanged" Size="Size.Large" ToggledSize="Size.Large" Style="margin: auto; padding-top: 25px" Icon="@Icons.Material.Outlined.BookmarkAdd" ToggledIcon="@Icons.Material.Outlined.BookmarkAdded" Color="Color.Default" ToggledColor="Color.Primary" />
+                    }
+                    
+                }
+            </MudStack>
+            
+            
+        </MudStack>
+        <MudStack Row="true">
+            @if (ListingDataStorageService.presentedExtendedListing.accountVerified == false)
+            {
+                <MudAvatar Size="Size.Small">
+                    @if (ListingDataStorageService.presentedExtendedListing.profileUrl != "")
+                    {
+                        <MudImage Src="@ListingDataStorageService.presentedExtendedListing.profileUrl" />
+                    }
+                    else if (ListingDataStorageService.presentedExtendedListing.accountType == "Institution")
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Domain" Color="Color.Primary" />
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Person" />
+                    }
+                </MudAvatar>
+            }
+            else
+            {
+                <MudBadge Icon="@Icons.Material.Filled.Check" Bordered="true" Overlap="true">
+                    <MudAvatar Size="Size.Small">
+                        @if (ListingDataStorageService.presentedExtendedListing.profileUrl != "")
+                        {
+                            <MudImage Src="@ListingDataStorageService.presentedExtendedListing.profileUrl" />
+                        }
+                        else if (ListingDataStorageService.presentedExtendedListing.accountType == "Institution")
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Domain" Color="Color.Primary" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Person" />
+                        }
+                    </MudAvatar>
+                </MudBadge>
+            }
+            <MudText Class="roboto-light">Posted by @ListingDataStorageService.presentedExtendedListing.accountName</MudText>
+        </MudStack>
+        <MudTextField AutoGrow="true" ReadOnly="true" Value="@ListingDataStorageService.presentedExtendedListing.description"  Variant="Variant.Filled"/>
+        <MudChipSet T="string">
+            @foreach (KeyValuePair<string, string> k in ListingDataStorageService.presentedExtendedListing.tags.ToArray())
+            {
+                <MudChip Variant="Variant.Outlined" Text="@k.Key" Style="@($"color: {k.Value}; border-color: {k.Value}")" />
+            }
+        </MudChipSet>
+        @if (ListingDataStorageService.presentedExtendedListing.carouselDisplay != null && ListingDataStorageService.presentedExtendedListing.carouselDisplay.Count() > 0)
+        {
+            <MudExpansionPanel Style="background-color: transparent; width:100vw">
+                <TitleContent>
+                    <MudIcon Icon="@Icons.Material.Outlined.Image" />
+                </TitleContent>
+            <ChildContent>
+                    <MudCarousel TData="object" Style="height: 60vh; width: auto" SelectedIndexChanged="carouselIndexChanged">
+                        @foreach (string link in ListingDataStorageService.presentedExtendedListing.carouselDisplay)
+                        {
+                            <MudCarouselItem Transition="@carouselTransition" Style="height: auto;">
+                                <div style="@($"height: 70vh; background-size: contain; width: auto; background-image: url({link}); background-repeat: no-repeat; background-position: center")">
+                                </div>
+
+                            </MudCarouselItem>
+                        }
+                    </MudCarousel>
+            </ChildContent>
+                
+            </MudExpansionPanel>
+        }
+        
+        <p style="color: white1" class="multilineText"></p>
+        @if (ListingDataStorageService.presentedExtendedListing.accountId == FirebaseAuthService.client.User.Uid)
+        {
+            
+            <MudDivider Style="margin-top: 10px" />
+            
+            <MudExpansionPanel Style="width: 100vw">
+                <TitleContent>
+                    <MudText Typo="Typo.h2" Color="Color.Primary"><b>@ListingDataStorageService.presentedExtendedListing.signedUpUsers.Count Interested</b></MudText>
+                </TitleContent>
+                <ChildContent>
+                    <div style="display: flex; justify-content: center; align-items: center;">
+                        <div style="max-height: 50vh; width: 90%; display: flex; justify-content: center; align-items: center; flex-direction: column; background-color: rgb(30, 30, 30); border-radius: 20px">
+                            <br />
+                            @foreach (KeyValuePair<string, Dictionary<string, string>> interestedUser in ListingDataStorageService.presentedExtendedListing.signedUpUsers.ToArray())
+                            {
+                                <div style="padding: 5px; padding-left: 10px; padding-right: 10px; border-radius: 20px; background-color: #1e1e1e">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                                        <MudAvatar Color="Color.Dark" Size="Size.Medium">
+                                            @if (interestedUser.Value["photoUrl"] != "")
+                                            {
+                                                <MudImage Src="@interestedUser.Value["photoUrl"]" />
+                                            }
+                                            else
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" />
+                                            }
+                                        </MudAvatar>
+                                        <MudSpacer />
+                                        <p style="color: white"><b>@(interestedUser.Value["shortname"] == "" ? interestedUser.Value["username"] : interestedUser.Value["shortname"])</b></p>
+                                        <MudSpacer />
+                                        <p style="color: gray">@interestedUser.Value["username"]</p>
+                                    </MudStack>
+                                </div>
+
+                                <br />
+                            }
+                        </div>
+                    </div>
+                    
+                </ChildContent>
+            </MudExpansionPanel>
+            
+            
+        }
+        <br />
+    </MudStack>
+</div>
+
+@code {
+    private Transition carouselTransition = Transition.Slide;
+    void AddToSavedExtendedDataListChanged(bool changed)
+    {
+        if (changed == false)
+        {
+            var docRefSignedUp = FirebaseAuthService.firestore.Collection("listingInfo").Document(ListingDataStorageService.presentedExtendedListing.listingId);
+            Dictionary<string, object> removeCurrentUser = new Dictionary<string, object>
+            {
+{$"signedUpUsers.{FirebaseAuthService.client.User.Uid}", Google.Cloud.Firestore.FieldValue.Delete}
+            };
+            docRefSignedUp.UpdateAsync(removeCurrentUser);
+            ListingDataStorageService.savedExtendedListingData.Remove(ListingDataStorageService.presentedExtendedListing.listingId);
+        } else
+        {
+            var docRefSignedUpNow = FirebaseAuthService.firestore.Collection("listingInfo").Document(ListingDataStorageService.presentedExtendedListing.listingId);
+            Dictionary<string, object> addCurrentUser = new Dictionary<string, object>
+            {
+                {$"signedUpUsers.{FirebaseAuthService.client.User.Uid}", new Dictionary<string, string>
+                {
+                    {"username", SharedRefVarService.username},
+                    {"photoUrl", SharedRefVarService.profileUrl},
+                    {"shortname", SharedRefVarService.shortname}
+                }
+            }};
+            docRefSignedUpNow.UpdateAsync(addCurrentUser);
+            ListingDataStorageService.savedExtendedListingData.TryAdd(ListingDataStorageService.presentedExtendedListing.listingId, ListingDataStorageService.presentedExtendedListing);
+        }
+        ListingDataStorageService.SaveSavedExtendedListingList();
+        var userDocRef = FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.client.User.Uid);
+        Dictionary<string, object> updateMyListingsQuery = new Dictionary<string, object>
+        {
+            {"interestedListings", ListingDataStorageService.ReturnIdsOfSavedListings()}
+        };
+        userDocRef.UpdateAsync(updateMyListingsQuery);
+    }
+    private void carouselIndexChanged(int i)
+    {
+       
+        
+
+    }
+}

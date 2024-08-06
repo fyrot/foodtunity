@@ -1,0 +1,413 @@
+﻿@page "/createListing"
+@inject NavigationManager Navigation
+@inject BlazorMudBlazorCACApp1.Components.Services.FirebaseAuthService FirebaseAuthService
+@inject IDialogService DialogService
+@inject BlazorMudBlazorCACApp1.Components.Services.ListingDataStorageService ListingDataStorageService;
+@inject BlazorMudBlazorCACApp1.Components.Services.SharedRefVarService SharedRefVarService
+@using static Components.Services.ListingDataStorageService;
+@using System.Text.Json
+@using System.ComponentModel.DataAnnotations;
+
+<div style="@($"height: 25vh; width: 100vw; background-image: url('{listingImageUrl}'); display: flex;")" class="listingImage" >
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowLeft" OnClick="@(() => {Navigation.NavigateTo("/listings");})" Style="margin-bottom: auto; margin-right: auto; color: white; background-color: #1f1f1ff0; position: relative; top: 10px; left: 10px" DropShadow="true" />
+    <MudIconButton Icon="@Icons.Material.Filled.Edit" Style="margin-top: auto; margin-left: auto; color: white; background-color: #1f1f1ff0; position: relative; bottom: 10px; right: 10px" OnClick="@(() => {imageUrlChangeDialogVisibility = true;})"  />
+</div>
+<div style="overflow-y: auto; height: calc(75vh - (var(--mud-appbar-height)) + 16px); background-color: #181818; ">
+    
+        <MudPaper Elevation="0" Style="background-color: transparent; display: flex; justify-content: center; padding: 20px; " Width="100%" Height="100%">
+            <MudForm @ref="listingFormVal" @bind-IsValid="listingFormIsValid">
+                <MudStack Spacing="5">
+                    <MudTextField Required="true" Label="Address" T="string" Variant="Variant.Filled" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Place" @ref="formAddressVal" OnBlur="@(() => {formAddressVal.AdornmentColor = Color.Default;})" onfocus="@(() => {formAddressVal.AdornmentColor = Color.Primary;})" />
+                    <MudStack Row="true">
+                        <MudDatePicker Required="true" tabindex="-1" Variant="Variant.Filled" Adornment="Adornment.Start" PickerVariant="PickerVariant.Dialog" Label="Start date" @ref="formStartDateVal" MinDate="DateTime.Today" MaxDate="DateTime.Today.AddDays(364)" OnClick="@(() => {formStartDateVal.AdornmentColor = Color.Primary;})" PickerClosed="@(() => {formStartDateVal.AdornmentColor = Color.Default;})" />
+                        <MudTimePicker Required="true" tabindex="-1" Variant="Variant.Filled" Adornment="Adornment.Start" AmPm="true" PickerVariant="PickerVariant.Dialog" Label="Start time" @ref="formStartTimeVal" OnClick="@(() => {formStartTimeVal.AdornmentColor = Color.Primary;})" PickerClosed="@(() => {formStartTimeVal.AdornmentColor = Color.Default;})" />
+                    </MudStack>
+                    <MudStack Row="true">
+                        <MudDatePicker Required="true" tabindex="-1" Variant="Variant.Filled" Adornment="Adornment.Start" PickerVariant="PickerVariant.Dialog" Label="End date" @ref="formEndDateVal" MinDate="DateTime.Today" MaxDate="DateTime.Today.AddDays(364)" OnClick="@(() => {formEndDateVal.AdornmentColor = Color.Primary;})" PickerClosed="@(() => {formEndDateVal.AdornmentColor = Color.Default;})" />
+                        <MudTimePicker Required="true" tabindex="-1" Variant="Variant.Filled" Adornment="Adornment.Start" AmPm="true" PickerVariant="PickerVariant.Dialog" Label="End time" @ref="formEndTimeVal" OnClick="@(() => {formEndTimeVal.AdornmentColor = Color.Primary;})" PickerClosed="@(() => {formEndTimeVal.AdornmentColor = Color.Default;})" />
+                    </MudStack>
+                    <MudTextField T="string" Variant="Variant.Filled" Placeholder="Event name, details, item quantities, etc." @ref="formDescriptionVal" Label="Description" AutoGrow="true" HelperText="Enter information about your event or listing" />
+                    <MudStack Row="true" Style="display: flex; align-items: center; justify-content:center ">
+
+                    <MudTooltip Text="Requires minimum age" ShowOnClick="true" ShowOnHover="true">
+                        <MudCheckBox @bind-Value="formRequestsMinimumRequiredAge" T="bool" />
+                    </MudTooltip>
+                    <MudSlider Min="0" Max="100" Step="1" Disabled="@(!formRequestsMinimumRequiredAge)" T="int" @bind-Value="formRequestMinimumRequiredAgeSliderVal" ValueLabel="true" Size="Size.Small"/>
+                    
+                        
+                        
+                    </MudStack>
+                    <MudStack>
+                        <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection" @bind-SelectedValue="tagChipMainSelected" CheckMark="true">
+                            <MudChip Value="@("pick-up")" T="string" Default="true" Variant="Variant.Outlined" Style="color: #00e676; border-color: #00e676" />
+                            <MudChip Value="@("volunteering")" Variant="Variant.Outlined" T="string" Style="color: #ff6600; border-color: #ff6600" />
+
+                        </MudChipSet>
+                        <MudDivider Style="color: green" Light="true" />
+                        <MudChipSet T="string">
+                            <MudChipSet T="string">
+                                @foreach (KeyValuePair<string, string> p in tagChipColorPairsCustom.ToArray())
+                                {
+                                    <MudChip Value="@(p.Key)" Style="@($"color: {p.Value}; border-color: ")" Variant="Variant.Outlined" T="string" OnClose="tagChipCloseCustom" />
+                                }
+                                <MudChip Text="add tag" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Add" OnClick="@(() => {tagChipCreatorDialogVisibility = true;})" />
+                            </MudChipSet>
+                        </MudChipSet>
+                        
+
+                    <!--<MudCheckBox Label="Requests sign up information" T="bool" @ref="formRequestsSignUpInfoVal" /> -->
+                        <MudButton Disabled="@(!listingFormIsValid)" Variant="Variant.Outlined" OnClick="submitListingCreation">Create listing</MudButton>
+                        <MudText>@testString</MudText>
+                    </MudStack>
+                </MudStack>
+                
+            </MudForm>
+        
+        </MudPaper>
+    <MudExpansionPanel Dense="true" Style="background-color: transparent; margin-top: -20px">
+        <TitleContent>
+            <MudIcon Icon="@Icons.Material.Outlined.Image" />
+        </TitleContent>
+        <ChildContent>
+            @foreach (string link in carouselDisplayLinks)
+            {
+                <div style="border-radius: 20px; padding: 10px">
+                    <div style="@($"height: 10vh; background-size: cover; width: auto; background-image: url({link}); background-repeat: no-repeat; background-position: center; background-color: rgb(10, 10, 10); backdrop-filter: blur(10px)")">
+                        <MudIconButton Icon="@Icons.Material.Outlined.Delete" Style="position: relative; left: 10px; top: 10px; background-color: #00000050" OnClick="@(() => {carouselDisplayLinks.Remove(link);})" />
+
+                    </div>
+                </div>
+                
+
+            }
+            <MudStack Row="true">
+                <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.Add" Style=" background-color: #00000025; color: white" OnClick="AddImageToCarouselByFilePath" />
+                <MudSpacer />
+            </MudStack>
+            
+        </ChildContent>
+
+
+    </MudExpansionPanel>
+    <br />
+</div>
+
+<MudDialog  @bind-Visible="tagChipCreatorDialogVisibility">
+    <TitleContent>Add your tag</TitleContent>
+    <DialogContent>
+        <MudForm @ref="tagChipCreatorFormVal" @bind-IsValid="tagChipCreatorFormValidity">
+            <MudTextField T="string" HelperText="Tag name" Required="true" @bind-Value="tagChipCreatorNameVal" />
+            <MudColorPicker Label="Choose a color" tabindex="-1" ColorPickerMode="ColorPickerMode.RGB" PickerVariant="PickerVariant.Inline" Required="true" @bind-Text="tagChipCreatorColorVal"  />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => {tagChipCreatorFormValidity = false;})">Cancel</MudButton>
+        <MudButton OnClick="tagChipCreatorButton">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+<MudDialog @bind-Visible="imageUrlChangeDialogVisibility">
+    <TitleContent>
+        <h2>Set listing image</h2>
+    </TitleContent>
+    <DialogContent>
+        <div style="display: flex; justify-content: center; align-items: center; flex-direction: column">
+            <MudTextField T="string" Adornment="Adornment.End" ReadOnly="true" Variant="Variant.Outlined" @bind-Text="setListingImageByFilePathField" AdornmentIcon="@Icons.Material.Outlined.PhotoLibrary" OnAdornmentClick="ChangeUserProfilePhotoByImage" />
+            <MudText>OR</MudText>
+
+        <MudTextField @ref="imageUrlChangeTextField" Label="Image URL" T="string"/> 
+    </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => {imageUrlChangeDialogVisibility = false;})">Cancel</MudButton>
+        <MudButton OnClick="listingImageUrlSet">Set</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @ref="addImageToCarouselDialog">
+    <TitleContent>
+        <h2>Add an image</h2>
+    </TitleContent> 
+    <DialogContent>
+        <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px">
+            <MudTextField T="string" Adornment="Adornment.End" ReadOnly="true" Variant="Variant.Outlined" @bind-Text="carouselDisplayAddByFilePath" AdornmentIcon="@Icons.Material.Outlined.PhotoLibrary" />
+            <MudText>OR</MudText>
+            <MudTextField @bind-Value="carouselDisplayAddByImageLink" Label="Image URL" T="string" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(async () => {await addImageToCarouselDialog.CloseAsync();})">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    MudForm listingFormVal; MudTextField<string> formAddressVal;
+    bool listingFormIsValid = false;
+    MudForm tagChipCreatorFormVal; string tagChipCreatorNameVal = "";  string tagChipCreatorColorVal = "";
+    MudDatePicker formStartDateVal; MudDatePicker formEndDateVal;
+    MudTimePicker formStartTimeVal; MudTimePicker formEndTimeVal;
+    MudTextField<string> formDescriptionVal;
+
+    string testString = "";
+    bool tagChipCreatorFormValidity = false; bool tagChipCreatorDialogVisibility = false;
+    bool imageUrlChangeDialogVisibility = false; MudTextField<string> imageUrlChangeTextField;
+    string tagChipMainSelected;
+    MudCheckBox<bool> formRequestsSignUpInfoVal;
+    Dictionary<string, string> tagChipColorPairs = new Dictionary<string, string>
+    {
+        {"volunteering", "#00e676"},
+        {"pick-up", "#ff6600"}
+    };
+    Dictionary<string, string> tagChipColorPairsCustom = new Dictionary<string, string> { };
+    string listingImageUrl = "https://cdn.pixeltote.com/cdn-cgi/image/format=auto/marketing/assets/thumbs/9/d/9dcb0333-c846-4052-93c4-c0b81ec36945/th-ls-lg-footpath-amidst-trees-in-a-forest-default-stock-photo.jpg";
+
+    string setListingImageByFilePathField = "";
+
+    List<string> carouselDisplayLinks = new List<string>();
+    private Transition carouselTransition = Transition.Slide;
+    MudDialog addImageToCarouselDialog;
+    string carouselDisplayAddByFilePath = "";
+    string carouselDisplayAddByImageLink = "";
+    int carouselSelectedIndex = 0;
+
+    bool formRequestsMinimumRequiredAge = false; 
+    int formRequestMinimumRequiredAgeSliderVal = 0; 
+    protected override void OnInitialized()
+    {
+
+        base.OnInitialized();
+    }
+    void tagChipCreatorButton()
+    {
+        tagChipCreatorFormVal.Validate();
+        if (tagChipCreatorFormValidity == true && !tagChipColorPairs.ContainsKey(tagChipCreatorNameVal) && !tagChipColorPairsCustom.ContainsKey(tagChipCreatorNameVal))
+        {
+            tagChipColorPairsCustom.Add(tagChipCreatorNameVal, tagChipCreatorColorVal);
+            tagChipCreatorDialogVisibility = false;
+
+        }
+
+    }
+    void listingImageUrlSet()
+    {
+        string newUrl = imageUrlChangeTextField.Text;
+        var checkValidityOfUrl = new UrlAttribute();
+        if (checkValidityOfUrl.IsValid(newUrl))
+        {
+            listingImageUrl = newUrl;
+            imageUrlChangeDialogVisibility = false;
+        }
+    }
+    void tagChipCloseCustom(MudChip<string> toBeClosed)
+    {
+        tagChipColorPairsCustom.Remove(toBeClosed.Value);
+    } 
+    private async Task submitListingCreation()
+    {
+        listingFormVal.Validate();
+        if (formEndDateVal.Date.Value == formStartDateVal.Date.Value && formEndTimeVal.Time.Value <= formStartTimeVal.Time.Value)
+        {
+            listingFormIsValid = false;
+        }
+        if (listingFormIsValid == true)
+        {
+            try
+            {
+                HttpClient mapsCoApiClient = new HttpClient();
+                string urlFormattedAddress = formAddressVal.Value.Replace(" ", "+");
+                string toConvertLatLonData = await mapsCoApiClient.GetStringAsync($"https://geocode.maps.co/search?q={urlFormattedAddress}&api_key={Environment.GetEnvironmentVariable("GEOCODING_MAPS_CO_APIKEY")}");
+                List<Dictionary<string, object>> locationLatLonData = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(toConvertLatLonData);
+                string locationLat = locationLatLonData[0]["lat"].ToString(); string locationLon = locationLatLonData[0]["lon"].ToString();
+                testString = locationLat + " " + locationLon;
+                var currentUserInfo = await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.client.User.Uid).GetSnapshotAsync();
+                long createdListings = (long)currentUserInfo.ToDictionary()["createdListings"];
+                testString = "createdListings Is The Problem";
+                Dictionary<string, string> allTags = new Dictionary<string, string>
+                {
+                    {tagChipMainSelected, tagChipColorPairs[tagChipMainSelected]}
+                };
+
+                foreach (KeyValuePair<string, string> p in tagChipColorPairsCustom.ToArray()) { allTags.Add(p.Key, p.Value);}
+
+                UserCreatedListingData toBeAddedListing = new UserCreatedListingData
+                    {
+                        address = formAddressVal.Value,
+                        addressLat = Double.Parse(locationLat),
+                        addressLon = Double.Parse(locationLon),
+                        accountId = FirebaseAuthService.client.User.Uid,
+                        listingId = FirebaseAuthService.client.User.Uid + createdListings.ToString(),
+                        startDateTimestamp = new DateTimeOffset(formStartDateVal.Date.Value).ToUnixTimeSeconds(),
+                        startTimeTimestamp = (long)formStartTimeVal.Time.Value.TotalSeconds,
+                        endDateTimestamp = new DateTimeOffset(formEndDateVal.Date.Value).ToUnixTimeSeconds(),
+                        endTimeTimestamp = (long)formEndTimeVal.Time.Value.TotalSeconds,
+                        imageUrl = listingImageUrl,
+                        description = formDescriptionVal.Text,
+
+                        carouselDisplay = carouselDisplayLinks.ToArray(),
+                        tags = allTags,
+                        requestsSignUpInfo = true
+                   };
+                ListingDataStorageService.AddToUserCreatedList(toBeAddedListing);
+                ListingDataStorageService.SaveUserCreatedList();
+
+
+
+                var additionalUserDataDocRef = await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.client.User.Uid).GetSnapshotAsync();
+                Dictionary<string, object> additionalAccountData = additionalUserDataDocRef.ToDictionary(); 
+                Dictionary<string, object> globalToBeAddedListing = new Dictionary<string, object>
+                    {
+                        {"address", toBeAddedListing.address},
+                        {"addressLat", toBeAddedListing.addressLat},
+                        {"addressLon", toBeAddedListing.addressLon},
+                        {"accountId", toBeAddedListing.accountId},
+                        {"listingId", toBeAddedListing.listingId},
+                        {"startDateTimestamp", toBeAddedListing.startDateTimestamp},
+                        {"startTimeTimestamp", toBeAddedListing.startTimeTimestamp + toBeAddedListing.startDateTimestamp},
+                        {"endDateTimestamp", toBeAddedListing.endDateTimestamp},
+                        {"endTimeTimestamp", toBeAddedListing.endTimeTimestamp + toBeAddedListing.endDateTimestamp},
+                        {"imageUrl", toBeAddedListing.imageUrl},
+                        {"description", formDescriptionVal.Text},
+                        {"tags", toBeAddedListing.tags},
+                        {"profileUrl", (string)additionalAccountData["photoUrl"]},
+                        {"accountType", (string)additionalAccountData["accountType"]},
+                        {"accountVerified", (bool)additionalAccountData["verified"]},
+                        {"accountName", FirebaseAuthService.client.User.Info.DisplayName},
+                        {"requestsSignUpInfo", true},
+                        {"carouselDisplay", carouselDisplayLinks.ToArray()},
+                        {"signedUpUsers", new Dictionary<string, Dictionary<string, string>>()}
+                    };
+                await FirebaseAuthService.firestore.Collection("listingInfo").Document(FirebaseAuthService.client.User.Uid + createdListings.ToString()).SetAsync(globalToBeAddedListing);
+                long newCreatedListings = createdListings + 1;
+                Dictionary<string, object> updateCreatedListingCount = new Dictionary<string, object>
+                {
+                    {"createdListings", newCreatedListings},
+                    {"myListings", ListingDataStorageService.ReturnIdsOfUserListings()}
+                };
+                await FirebaseAuthService.firestore.Collection("userInfo").Document(FirebaseAuthService.client.User.Uid).SetAsync(updateCreatedListingCount, Google.Cloud.Firestore.SetOptions.MergeAll);
+                Navigation.NavigateTo("/listings");
+                //testString = "Saved listing";
+
+            } catch (Exception ex)
+            {
+                testString = ex.Message;
+            }
+
+        }
+
+    }
+    private async Task ChangeUserProfilePhotoByImage()
+    {
+        try
+        {
+            FileResult selectedImage = await MediaPicker.PickPhotoAsync();
+            var imageStream = await selectedImage.OpenReadAsync();
+
+            MemoryStream imageMemory = new MemoryStream();
+            imageStream.CopyTo(imageMemory);
+            setListingImageByFilePathField = selectedImage.FullPath;
+            byte[] imageBytes = imageMemory.ToArray();
+            //imageStream.Close();
+            imageMemory.Dispose();
+            string imageBase64 = System.Convert.ToBase64String(imageBytes);
+            HttpClient imgBBClient = SharedRefVarService.sharedHttpClient;//new HttpClient();
+            MultipartFormDataContent parameters = new MultipartFormDataContent();
+            parameters.Add(new StringContent(Environment.GetEnvironmentVariable("IMG_BB_APIKEY")), "key");
+            parameters.Add(new StringContent(imageBase64), "image");
+            HttpResponseMessage response = await imgBBClient.PostAsync("https://api.imgbb.com/1/upload", parameters);
+            if (response != null)
+            {
+                response.EnsureSuccessStatusCode();
+                string stringObjectResponse = await response.Content.ReadAsStringAsync();
+                //Dictionary<string, object> objectResponse = JsonSerializer.Deserialize<Dictionary<string, object>>(stringObjectResponse);
+                // manual quick and dirty extraction of url
+                int urlStartIndex = stringObjectResponse.IndexOf("url\":") + 5;
+                int urlEndIndex = urlStartIndex; int quotationMarksFound = 0;
+                while (quotationMarksFound < 2)
+                {
+                    if (stringObjectResponse[urlEndIndex] == '"')
+                    {
+                        quotationMarksFound++;
+                    }
+                    urlEndIndex++;
+                }
+                string newUrl = stringObjectResponse.Substring(urlStartIndex + 1, (urlEndIndex - urlStartIndex - 2)).Replace(@"\", "");
+                UrlAttribute urlVar = new UrlAttribute();
+                if (urlVar.IsValid(newUrl) || newUrl == "") // change 1
+                {
+                    listingImageUrl = newUrl;
+                }
+
+                //setProfileImageUrlVisibility = false;
+                //await ChangeUserProfilePhotoUrlNew();
+
+            }
+
+        }
+        catch (Exception ex)
+        {
+            //setProfileImageUrlDialogTextField.ErrorText = ex.Message;
+        }
+
+    } // maybe these two could be combined
+    private async Task AddImageToCarouselByFilePath()
+    {
+        try
+        {
+            FileResult selectedImage = await MediaPicker.PickPhotoAsync();
+            var imageStream = await selectedImage.OpenReadAsync();
+            carouselDisplayAddByFilePath = selectedImage.FullPath;
+            MemoryStream imageMemory = new MemoryStream();
+            imageStream.CopyTo(imageMemory);
+            string base64String = System.Convert.ToBase64String(imageMemory.ToArray());
+            HttpClient imgBBClient = SharedRefVarService.sharedHttpClient;//new HttpClient();
+            MultipartFormDataContent parameters = new MultipartFormDataContent();
+            parameters.Add(new StringContent(Environment.GetEnvironmentVariable("IMG_BB_APIKEY")), "key"); // move key to environment variable
+            parameters.Add(new StringContent(base64String), "image");
+            HttpResponseMessage response = await imgBBClient.PostAsync("https://api.imgbb.com/1/upload", parameters);
+            if (response != null)
+            {
+                response.EnsureSuccessStatusCode();
+                string stringObjectResponse = await response.Content.ReadAsStringAsync();
+                int urlStartIndex = stringObjectResponse.IndexOf("url\":") + 5;
+                int urlEndIndex = urlStartIndex; int quotationMarksFound = 0;
+                while (quotationMarksFound < 2)
+                {
+                    if (stringObjectResponse[urlEndIndex] == '"') { quotationMarksFound++; }
+                    urlEndIndex++;
+                }
+                string newUrl = stringObjectResponse.Substring(urlStartIndex + 1, (urlEndIndex - urlStartIndex - 2)).Replace(@"\", "");
+                if (CheckImageUrlValidity(newUrl)) { carouselDisplayLinks.Add(newUrl); }
+            }
+
+        } catch (Exception ex)
+        {
+            
+        }
+    }
+    private bool CheckImageUrlValidity(string imageUrl)
+    {
+        return (new UrlAttribute()).IsValid(imageUrl) || imageUrl.Trim() == "";
+    }
+    private async Task CarouselDialogExtendedClose()
+    {
+        await addImageToCarouselDialog.CloseAsync();
+        carouselDisplayAddByFilePath = ""; carouselDisplayAddByImageLink = "";
+    }
+    internal class ListingData
+    {
+        public string address {get; set; }
+        public double addressLat { get; set;  }
+        public double addressLon {get; set; }
+        public string accountId { get; set; }
+        public string listingId { get; set;  }
+        public long startDateTimestamp {get; set; }
+        public long startTimeTimestamp {get; set; }
+        public long endDateTimestamp {get; set; }
+        public long endTimeTimestamp {get; set; }
+        public string imageUrl { get; set; }
+        public string description {get; set; }
+        public Dictionary<string, string> tags {get; set; }
+    }
+
+}
